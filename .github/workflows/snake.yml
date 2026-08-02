@@ -1,0 +1,31 @@
+name: Generate Snake Contribution Graph
+ 
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+ 
+permissions:
+  contents: write
+ 
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+ 
+      - uses: Platane/snk@v3
+        with:
+          github_user_name: XCHAUDHARY00
+          outputs: |
+            dist/github-contribution-grid-snake.svg
+            dist/github-contribution-grid-snake-dark.svg?palette=github-dark
+ 
+      - run: |
+          cd dist
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "GitHub Actions"
+          git switch --orphan output
+          git add -A
+          git commit -m "chore: generate snake"
+          git push -f origin output
