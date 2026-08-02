@@ -13,13 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     name: Generate Snake Contribution
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
 
       - name: Generate Snake SVG
         uses: Platane/snk@v3
@@ -28,31 +25,46 @@ jobs:
           outputs: |
             dist/github-contribution-grid-snake.svg
             dist/github-contribution-grid-snake-dark.svg?palette=github-dark
+          build_dir: dist
 
-      - name: Push to output branch
-        uses: actions/upload-artifact@v3
-        with:
-          name: snake-artifacts
-          path: dist/
-
-      - name: Create output branch if needed
+      - name: Configure Git
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-          git fetch origin output 2>/dev/null || git checkout --orphan output
-          git checkout output 2>/dev/null || git checkout -b output
 
-      - name: Copy generated files to output branch
+      - name: Create and Push to Output Branch
         run: |
+          # Check if output branch exists, if not create it
+          if git rev-parse --verify origin/output >/dev/null 2>&1; then
+            git checkout output
+          else
+            git checkout --orphan output
+          fi
+          
+          # Remove all files and add new ones
+          git rm -r . || true
           mkdir -p output
           cp dist/github-contribution-grid-snake.svg output/
           cp dist/github-contribution-grid-snake-dark.svg output/
+          
+          # Create placeholder to keep branch
+          echo "# Snake Contribution Graphs" > README.md
           git add output/
-          git commit -m "Generate snake contribution graph $(date)" || true
+          git add README.md
+          git commit -m "Generate snake contribution graph $(date)" || echo "No changes to commit"
           git push -f origin output
         continue-on-error: true
 
-      - name: Verify output files
+      - name: Verify Generated Files
         run: |
-          echo "Checking output branch files..."
-          git ls-tree -r output
+          if [ -f "dist/github-contribution-grid-snake.svg" ]; then
+            echo "✅ Light snake SVG generated successfully"
+          else
+            echo "❌ Light snake SVG generation failed"
+          fi
+          
+          if [ -f "dist/github-contribution-grid-snake-dark.svg" ]; then
+            echo "✅ Dark snake SVG generated successfully"
+          else
+            echo "❌ Dark snake SVG generation failed"
+          fi
